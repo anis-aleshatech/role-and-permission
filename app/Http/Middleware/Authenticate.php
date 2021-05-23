@@ -4,6 +4,11 @@ namespace App\Http\Middleware;
 
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 
+use Closure;
+
+use Exception;
+use Tymon\JWTAuth\Facades\JWTAuth as FacadesJWTAuth;
+
 class Authenticate extends Middleware
 {
     /**
@@ -12,10 +17,20 @@ class Authenticate extends Middleware
      * @param  \Illuminate\Http\Request  $request
      * @return string|null
      */
-    protected function redirectTo($request)
+
+    public function handle($request, Closure $next)
     {
-        if (! $request->expectsJson()) {
-            return route('login');
+        try {
+            $user = FacadesJWTAuth::parseToken()->authenticate();
+        } catch (Exception $e) {
+            if ($e instanceof \Tymon\JWTAuth\Exceptions\TokenInvalidException){
+                return response()->json(['message' => 'Token is Invalid']);
+            }else if ($e instanceof \Tymon\JWTAuth\Exceptions\TokenExpiredException){
+                return response()->json(['message' => 'Token is Expired']);
+            }else{
+                return response()->json(['message' => 'Authorization Token not found']);
+            }
         }
+        return $next($request);
     }
 }
